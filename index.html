@@ -1,129 +1,467 @@
 <!DOCTYPE html>
 <html lang="en-US">
-	<head>
-		<meta charset="utf-8">
-		<meta name="color-scheme" content="dark light">
-		<meta name="google" content="notranslate">
-		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, user-scalable=yes">
-		<link rel="icon" href="favicon.ico">
-		<title>unlimited:waifu2x</title>
-		<script src="ort/ort.wasm.min.js" defer></script>
-		<script src="script.js" defer></script>
-		<link href="style.css" rel="stylesheet" type="text/css">
-	</head>
-	<body>
-		<header>
-			<h1>unlimited:waifu2x</h1>
-			<p class="subtitle">An experimental in-browser version of waifu2x.</p>
-			<p class="note">2023-05-04: Add new art_scan models for manga, anime screencaps; Ctrl+F5 to reload</p>
-			<p class="note">2023-04-07: Update photo models; Ctrl+F5 to reload</p>
-			<p class="note">2023-03-29: Add new photo models; Drag and drop support for image files</p>
-		</header>
-		<main>
-			<canvas id="input-canvas" width="0" height="0"></canvas>
-			<form id="form" action="javascript:">
-				<table>
-					<tr>
-						<td><label for="input-file">Input</label></td>
-						<td><input type="file" accept="image/*" id="input-file" disabled></td>
-					</tr>
-					<tr>
-						<td></td>
-						<td class="hint">...or drag and drop<br />...or paste from clipboard</td>
-					</tr>
-					<tr>
-						<td><label for="select-model">Model</label></td>
-						<td><select id="select-model" disabled>
-							<option value="swin_unet.art">🎨 swin_unet / art</option>
-							<option value="swin_unet.art_scan">🖨 swin_unet / art scan</option>
-							<option value="swin_unet.photo">📷 swin_unet / photo</option>
-							<option value="cunet.art" selected>🎨 cunet / art (201811)</option>
-						</select></td>
-					</tr>
-					<tr>
-						<td><label for="select-noise-level">Denoise</label></td>
-						<td><select id="select-noise-level" disabled>
-							<option value="-1">(-) None</option>
-							<option value="0">(0) Low</option>
-							<option value="1">(1) Medium</option>
-							<option value="2">(2) High</option>
-							<option value="3" selected>(3) Highest</option>
-						</select></td>
-					</tr>
-					<tr>
-						<td><label for="enable-antialias">Antialias</label></td>
-						<td><input type="checkbox" id="enable-antialias" disabled></td>
-					</tr>
-					<tr>
-						<td><label for="select-scale">Scale</label></td>
-						<td><select id="select-scale" disabled>
-							<option value="1">1x</option>
-							<option value="2" selected>2x</option>
-							<option value="4">4x</option>
-						</select>
-							<span id="scale-comment" class="comment hidden">no 4x support</span>
-						</td>
-					</tr>
-					<tr>
-						<td><label for="tile-size">Tile Size</label></td>
-						<td><input type="number" id="tile-size" list="tile-sizes" value="64" disabled>
-							<datalist id="tile-sizes">
-								<option value="64">64</option>
-								<option value="256">256</option>
-								<option value="400">400</option>
-								<option value="640">640</option>
-							</datalist>
-							<br />
-							<span id="tile-size-comment" class="comment hidden">256 is recommended</span>
-						</td>
-					</tr>
-					<tr>
-						<td>Tile Order</td>
-						<td>
-							<label><input type="checkbox" id="tile-random" disabled> Random</label>
-							<br />
-							<label><input type="checkbox" id="tile-focus" checked disabled> Cursor Focus</label>
-						</td>
-					</tr>
-					<tr>
-						<td><label for="select-tta-level">TTA</label></td>
-						<td><select id="select-tta-level" disabled>
-							<option value="0" selected>0</option>
-							<option value="2">2</option>
-							<option value="4">4</option>
-						</select></td>
-					</tr>
-					<tr>
-						<td><label for="alpha-channel">Alpha Channel</label></td>
-						<td><input type="checkbox" id="alpha-channel" disabled></td>
-					</tr>
-					<tr>
-						<td><label for="background-color">Background</label></td>
-						<td><input type="color" id="background-color" value="#ffffff" disabled></td>
-					</tr>
-					<tr>
-						<td><label for="alpha-threshold">Alpha Threshold</label></td>
-						<td><input type="number" step="0.01" id="alpha-threshold" value="0.5" disabled></td>
-					</tr>
-					<tr>
-						<td colspan="2">
-							<div class="buttons">
-								<button type="submit" id="start-button" disabled>Start</button>
-								<button type="button" id="stop-button" disabled>Stop</button>
-							</div>
-						</td>
-					</tr>
-				</table>
-			</form>
-			<div id="message">( ・∀・)</div>
-			<canvas id="output-canvas" width="0" height="0" class="expanded"></canvas>
-		</main>
-		<footer>
-			<p><a href="https://unlimited.waifu2x.net/">The website</a> is under construction.</p>
-			<p>Powered by <a href="https://github.com/nagadomi/nunif">nunif/waifu2x</a>,
-				<a href="https://waifu2x.udp.jp/">waifu2x.udp.jp</a></p>
-			<p>Rewritten by <a href="https://cohost.org/LoganDark">LoganDark</a> and
-				<a href="https://cohost.org/EmilyTheFlareon">Emily the Flareon</a></p>
-		</footer>
-	</body>
+<head>
+    <meta charset="utf-8">
+    <meta name="color-scheme" content="dark light">
+    <meta name="google" content="notranslate">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, user-scalable=yes">
+    <link rel="icon" href="favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>unlimited:waifu2x</title>
+    <script src="ort/ort.wasm.min.js" defer></script>
+    <script src="script.js" defer></script>
+    <style>
+        :root {
+            --gradient-start: #6366f1;
+            --gradient-mid: #8b5cf6;
+            --gradient-end: #d946ef;
+            --surface-color: #ffffff;
+            --text-color: #1f2937;
+            --border-color: #e5e7eb;
+            --hover-color: #4f46e5;
+            --error-color: #ef4444;
+            --success-color: #22c55e;
+            --radius: 12px;
+            --spacing: 1.5rem;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --surface-color: #1f2937;
+                --text-color: #f3f4f6;
+                --border-color: #374151;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            line-height: 1.5;
+            padding: var(--spacing);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: var(--spacing);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, 
+                var(--gradient-start),
+                var(--gradient-mid),
+                var(--gradient-end));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-color);
+            opacity: 0.8;
+            margin-bottom: 1rem;
+        }
+
+        .note {
+            color: var(--success-color);
+            font-size: 0.875rem;
+            margin: 0.25rem 0;
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: minmax(300px, 1fr) minmax(300px, 2fr);
+            gap: var(--spacing);
+        }
+
+        @media (max-width: 768px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .controls-container {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--spacing);
+            background: linear-gradient(135deg, 
+                rgba(99, 102, 241, 0.05),
+                rgba(139, 92, 246, 0.05),
+                rgba(217, 70, 239, 0.05));
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+                       0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing);
+        }
+
+        canvas {
+            background-color: #2a2a2a;
+            border-radius: var(--radius);
+            max-width: 100%;
+            height: auto;
+        }
+
+        canvas.expanded, canvas.expanded2 {
+            width: 100%;
+            object-fit: contain;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            background: transparent;
+        }
+
+        select, input[type="number"], input[type="color"] {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            background: var(--surface-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        select:focus, input[type="number"]:focus, input[type="color"]:focus,
+        select:hover, input[type="number"]:hover, input[type="color"]:hover {
+            border-color: var(--gradient-mid);
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+            outline: none;
+        }
+
+        .checkbox-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 0.25rem 0;
+            min-height: 1.5rem;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+            background: var(--surface-color);
+        }
+
+        .checkbox-group input[type="checkbox"]:not(:disabled):hover {
+            border-color: var(--gradient-mid);
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+        }
+
+        .checkbox-group input[type="checkbox"]:checked {
+            border: none;
+            background: linear-gradient(135deg, 
+                var(--gradient-start),
+                var(--gradient-mid),
+                var(--gradient-end));
+        }
+
+        .checkbox-group input[type="checkbox"]::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-group input[type="checkbox"]:checked::after {
+            content: '';
+            transform: translate(-50%, -50%) scale(1);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .checkbox-group input[type="checkbox"]:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: var(--border-color);
+        }
+
+        .checkbox-group label {
+            cursor: pointer;
+            font-size: 0.9375rem;
+            user-select: none;
+        }
+
+        .checkbox-group input[type="checkbox"]:disabled + label {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button[type="submit"] {
+            background: linear-gradient(135deg, 
+                var(--gradient-start),
+                var(--gradient-mid),
+                var(--gradient-end));
+            color: white;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        button[type="submit"]::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                var(--gradient-end),
+                var(--gradient-mid),
+                var(--gradient-start));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: -1;
+        }
+
+        button[type="submit"]:hover::before {
+            opacity: 1;
+        }
+
+        button[type="button"] {
+            background: var(--border-color);
+            color: var(--text-color);
+        }
+
+        button[type="button"]:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .hint {
+            font-size: 0.875rem;
+            color: var(--text-color);
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+
+        .comment {
+            font-size: 0.875rem;
+            color: var(--primary-color);
+        }
+
+        .comment.hidden {
+            display: none;
+        }
+
+        #message {
+            padding: 1rem;
+            border-radius: var(--radius);
+            background: rgba(var(--primary-color), 0.1);
+            color: var(--text-color);
+            font-family: monospace;
+        }
+
+        footer {
+            margin-top: var(--spacing);
+            text-align: center;
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Unlimited Waifu2x</h1>
+        <p class="subtitle">An experimental in-browser version of waifu2x.</p>
+    </header>
+    <main>
+        <div class="controls-container">
+            <form id="form" action="javascript:">
+                <div class="form-group">
+                    <label for="input-file">Input</label>
+                    <input type="file" accept="image/*" id="input-file" disabled>
+                    <p class="hint">...or drag and drop<br>...or paste from clipboard</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="select-model">Model</label>
+                    <select id="select-model" disabled>
+                        <option value="swin_unet.art">🎨 swin_unet / art</option>
+                        <option value="swin_unet.art_scan">🖨 swin_unet / art scan</option>
+                        <option value="swin_unet.photo">📷 swin_unet / photo</option>
+                        <option value="cunet.art" selected>🎨 cunet / art (201811)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="select-noise-level">Denoise</label>
+                    <select id="select-noise-level" disabled>
+                        <option value="-1">(-) None</option>
+                        <option value="0">(0) Low</option>
+                        <option value="1">(1) Medium</option>
+                        <option value="2">(2) High</option>
+                        <option value="3" selected>(3) Highest</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <label for="enable-antialias">Antialias</label>
+                        <input type="checkbox" id="enable-antialias" disabled>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="select-scale">Scale</label>
+                    <select id="select-scale" disabled>
+                        <option value="1">1x</option>
+                        <option value="2" selected>2x</option>
+                        <option value="4">4x</option>
+                    </select>
+                    <span id="scale-comment" class="comment hidden">no 4x support</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="tile-size">Tile Size</label>
+                    <input type="number" id="tile-size" list="tile-sizes" value="64" disabled>
+                    <datalist id="tile-sizes">
+                        <option value="64">64</option>
+                        <option value="256">256</option>
+                        <option value="400">400</option>
+                        <option value="640">640</option>
+                    </datalist>
+                    <span id="tile-size-comment" class="comment hidden">256 is recommended</span>
+                </div>
+
+                <div class="form-group">
+                    <label>Tile Order</label>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="tile-random" disabled>
+                        <label for="tile-random">Random</label>
+                    </div>
+                    <br>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="tile-focus" checked disabled>
+                        <label for="tile-focus">Cursor Focus</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="select-tta-level">TTA</label>
+                    <select id="select-tta-level" disabled>
+                        <option value="0" selected>0</option>
+                        <option value="2">2</option>
+                        <option value="4">4</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <label for="alpha-channel">Alpha Channel</label>
+                        <input type="checkbox" id="alpha-channel" disabled>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="background-color">Background</label>
+                    <input type="color" id="background-color" value="#ffffff" disabled>
+                </div>
+
+                <div class="form-group">
+                    <label for="alpha-threshold">Alpha Threshold</label>
+                    <input type="number" step="0.01" id="alpha-threshold" value="0.5" disabled>
+                </div>
+
+                <div class="buttons">
+                    <button type="submit" id="start-button" disabled>Start</button>
+                    <button type="button" id="stop-button" disabled>Stop</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="preview-container">
+            <canvas id="input-canvas" width="0" height="0"></canvas>
+            <div id="message">( ・∀・)</div>
+            <canvas id="output-canvas" width="0" height="0" class="expanded"></canvas>
+        </div>
+    </main>
+
+    <footer>
+        <p><a href="https://unlimited.waifu2x.net/">The website</a> is under construction.</p>
+        <p>Powered by <a href="https://github.com/nagadomi/nunif">nunif/waifu2x</a>,
+            <a href="https://waifu2x.udp.jp/">waifu2x.udp.jp</a></p>
+        <p>Rewritten by <a href="https://cohost.org/LoganDark">LoganDark</a> and
+            <a href="https://cohost.org/EmilyTheFlareon">Emily the Flareon</a></p>
+    </footer>
+</body>
 </html>
